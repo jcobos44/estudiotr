@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Integral de Estudio de Tiempos y Movimientos</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a; /* Slate 900 */
+            --bg-panel: #1e293b; /* Slate 800 */
+            --bg-panel-hover: #334155; /* Slate 700 */
+            --text-main: #f8fafc; /* Slate 50 */
+            --text-muted: #94a3b8; /* Slate 400 */
+            --accent: #10b981; /* Emerald 500 */
+            --accent-hover: #059669; /* Emerald 600 */
+            --accent-blue: #3b82f6; /* Blue 500 */
+            --border: #334155;
+            --danger: #ef4444; /* Red 500 */
+            --warning: #f59e0b;
+            --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .btn {
+            background-color: var(--bg-panel-hover);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background-color: var(--border); }
+        .btn-primary { background-color: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn-primary:hover { background-color: var(--accent-hover); }
+        .btn-danger { background-color: var(--danger); border-color: var(--danger); color: #fff; }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-container { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel h2 {
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        video {
+            width: 100%;
+            background: #000;
+            border-radius: 6px;
+            aspect-ratio: 16/9;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="number"], input[type="text"], select, input[type="file"] {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--bg-panel-hover);
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        td { font-family: var(--font-mono); }
+
+        .table-container {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .kpi-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .kpi {
+            background: var(--bg-dark);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .kpi span {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .kpi strong {
+            font-size: 1.4rem;
+            font-family: var(--font-mono);
+            color: var(--accent);
+        }
+
+        .indicator {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .ind-good { background: rgba(16, 185, 129, 0.2); color: var(--accent); }
+        .ind-bad { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+        .bimanual-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr 1fr;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            background: var(--bg-dark);
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: var(--warning);
+            margin-top: -5px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Simulador de Estudio de Tiempos y Movimientos</h1>
+        <div>
+            <button class="btn" onclick="loadDemoData()">Cargar Datos de Ejemplo</button>
+            <button class="btn btn-primary" onclick="exportCSV()">Exportar CSV</button>
+        </div>
+    </header>
+
+    <div class="grid-container">
+        
+        <!-- Módulo 1: Cronometraje y Video -->
+        <div class="panel">
+            <h2>1. Cronometraje por Video</h2>
+            <video id="videoPlayer" src="https://www.w3schools.com/html/mov_bbb.mp4" controls></video>
+            
+            <div class="controls-row">
+                <input type="file" id="videoUpload" accept="video/mp4" style="flex: 1;">
+                <select id="timingMode">
+                    <option value="continuous">Vuelta Continua</option>
+                    <option value="snapback">Vuelta a Cero (Snapback)</option>
+                </select>
+                <button class="btn btn-primary" id="btnCapture">Capturar (C)</button>
+            </div>
+            <div class="help-text">Atajos: [Espacio] Play/Pause | [J]/[L] -/+ 1s | [C] Capturar Tiempo</div>
+
+            <div class="table-container">
+                <table id="obsTable">
+                    <thead>
+                        <tr>
+                            <th>Ciclo</th>
+                            <th>Tiempo Obs (s)</th>
+                            <th>Rating (%)</th>
+                            <th>Atípico</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Datos dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Módulo 2: Motor de Cálculo Matemático -->
+        <div class="panel">
+            <h2>2. Cálculos Estadísticos y Tiempo Estándar</h2>
+            
+            <div class="controls-row">
+                <div>
+                    <label>Confianza (k):</label>
+                    <select id="confLevel" onchange="calculateStats()">
+                        <option value="1.96">95% (k=1.96)</option>
+                        <option value="2.58">99% (k=2.58)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Error (e %):</label>
+                    <input type="number" id="errMargin" value="5" style="width: 70px;" oninput="calculateStats()">
+                </div>
+                <div id="sampleIndicator" class="indicator ind-bad">Muestra Insuficiente</div>
+            </div>
+
+            <div class="controls-row">
+                <div><label>Suplementos Personales (%):</label><input type="number" id="supPers" value="5" style="width: 70px;" oninput="calculateStats()"></div>
+                <div><label>Fatiga Básica (%):</label><input type="number" id="supFatiga" value="4" style="width: 70px;" oninput="calculateStats()"></div>
+                <div><label>Suplementos Variables (%):</label><input type="number" id="supVar" value="2" style="width: 70px;" oninput="calculateStats()"></div>
+            </div>
+
+            <div class="kpi-board">
+                <div class="kpi"><span>Lecturas Válidas (n)</span><strong id="kpiN">0</strong></div>
+                <div class="kpi"><span>Muestra Req. (n')</span><strong id="kpiNCalc">0</strong></div>
+                <div class="kpi"><span>Tiempo Prom. (TO)</span><strong id="kpiTO">0.00s</strong></div>
+                <div class="kpi"><span>Tiempo Normal (TN)</span><strong id="kpiTN">0.00s</strong></div>
+                <div class="kpi" style="grid-column: span 2; border-color: var(--accent);">
+                    <span>TIEMPO ESTÁNDAR (TE)</span><strong id="kpiTE">0.00s</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 3: Diagrama Bimanual -->
+        <div class="panel">
+            <h2>3. Análisis de Micro-Movimientos (Therbligs)</h2>
+            <div class="controls-row">
+                <button class="btn" onclick="addTherbligRow()">+ Agregar Movimiento</button>
+                <div id="bimanualBalance" class="indicator ind-good">Balance Eficiencia: 0%</div>
+            </div>
+            
+            <div id="bimanualContainer" class="table-container" style="max-height: 200px;">
+                <!-- Filas dinámicas -->
+            </div>
+        </div>
+
+        <!-- Módulo 4: Visualización -->
+        <div class="panel">
+            <h2>4. Gráficos de Análisis</h2>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="chart-container">
+                    <canvas id="chartStability"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartBreakdown"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    // ESTADO GLOBAL
+    let observations = [];
+    let bimanualData = [];
+    let lastSnapTime = 0;
+
+    // THERBLIGS DICIONARIO
+    const therbligs = [
+        { code: "AL", name: "Alcanzar (AL)", type: "effective" },
+        { code: "T", name: "Tomar (T)", type: "effective" },
+        { code: "M", name: "Mover (M)", type: "effective" },
+        { code: "E", name: "Ensamblar (E)", type: "effective" },
+        { code: "B", name: "Buscar (B)", type: "ineffective" },
+        { code: "SE", name: "Seleccionar (SE)", type: "ineffective" },
+        { code: "SO", name: "Sostener (SO)", type: "ineffective" },
+        { code: "D", name: "Demora (D)", type: "ineffective" }
+    ];
+
+    // ELEMENTOS DOM
+    const video = document.getElementById('videoPlayer');
+    const videoUpload = document.getElementById('videoUpload');
+    const tbody = document.querySelector('#obsTable tbody');
+    const timingMode = document.getElementById('timingMode');
+    const bimanualContainer = document.getElementById('bimanualContainer');
+
+    let chartStability, chartBreakdown;
+
+    // VALIDACIÓN DE CHART.JS (A prueba de fallos sin internet)
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Courier New', Courier, monospace";
+    }
+
+    function initCharts() {
+        if (typeof Chart === 'undefined') {
+            console.warn("Chart.js no cargó. Los gráficos no se mostrarán, pero el sistema seguirá funcionando.");
+            return;
+        }
+        const ctxStab = document.getElementById('chartStability').getContext('2d');
+        chartStability = new Chart(ctxStab, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Tiempo Observado (s)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Curva de Estabilidad del Ciclo' } } }
+        });
+
+        const ctxBreak = document.getElementById('chartBreakdown').getContext('2d');
+        chartBreakdown = new Chart(ctxBreak, {
+            type: 'bar',
+            data: { labels: ['Desglose de Tiempos'], datasets: [
+                { label: 'Tiempo Normal (TN)', data: [0], backgroundColor: '#10b981' },
+                { label: 'Suplementos', data: [0], backgroundColor: '#f59e0b' }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { title: { display: true, text: 'Composición del Tiempo Estándar' } } }
+        });
+    }
+
+    // MANEJO DE VIDEO
+    if (videoUpload) {
+        videoUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                video.src = URL.createObjectURL(file);
+                resetStudy();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        
+        switch(e.code) {
+            case 'Space': 
+                e.preventDefault(); 
+                video.paused ? video.play() : video.pause(); 
+                break;
+            case 'KeyJ': video.currentTime = Math.max(0, video.currentTime - 1); break;
+            case 'KeyL': video.currentTime += 1; break;
+            case 'KeyC': 
+            case 'Backslash': 
+                e.preventDefault();
+                captureTime(); 
+                break;
+        }
+    });
+
+    document.getElementById('btnCapture').addEventListener('click', captureTime);
+
+    function captureTime() {
+        const currentVideoTime = video.currentTime;
+        if(currentVideoTime === 0 && video.paused) return;
+
+        let timeObs = 0;
+        if (timingMode.value === 'snapback') {
+            timeObs = currentVideoTime - lastSnapTime;
+            lastSnapTime = currentVideoTime;
+        } else {
+            timeObs = currentVideoTime;
+        }
+
+        if(timeObs <= 0) return;
+
+        observations.push({
+            id: Date.now(),
+            cycle: observations.length + 1,
+            to: timeObs,
+            rating: 100,
+            outlier: false
+        });
+
+        renderTable();
+        calculateStats();
+    }
+
+    function renderTable() {
+        tbody.innerHTML = '';
+        observations.forEach((obs, index) => {
+            const tr = document.createElement('tr');
+            if(obs.outlier) tr.style.opacity = '0.5';
+            
+            tr.innerHTML = `
+                <td>${obs.cycle}</td>
+                <td>${obs.to.toFixed(2)}</td>
+                <td><input type="number" value="${obs.rating}" style="width: 60px" onchange="updateRating(${index}, this.value)"></td>
+                <td><input type="checkbox" ${obs.outlier ? 'checked' : ''} onchange="toggleOutlier(${index})"></td>
+                <td><button class="btn btn-danger" style="padding: 2px 6px;" onclick="deleteObs(${index})">X</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        const container = document.querySelector('.table-container');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function updateRating(index, val) {
+        observations[index].rating = parseFloat(val) || 100;
+        calculateStats();
+    }
+
+    function toggleOutlier(index) {
+        observations[index].outlier = !observations[index].outlier;
+        renderTable();
+        calculateStats();
+    }
+
+    function deleteObs(index) {
+        observations.splice(index, 1);
+        observations.forEach((o, i) => o.cycle = i + 1);
+        renderTable();
+        calculateStats();
+    }
+
+    // MOTOR MATEMÁTICO Y ESTADÍSTICO
+    function calculateStats() {
+        const validObs = observations.filter(o => !o.outlier && o.to > 0);
+        const n = validObs.length;
+        
+        document.getElementById('kpiN').innerText = n;
+
+        if (n < 2) {
+            resetStatsUI();
+            updateCharts([], 0, 0);
+            return;
+        }
+
+        const sumTO = validObs.reduce((acc, curr) => acc + curr.to, 0);
+        const meanTO = sumTO / n;
+        
+        const sumSqDiff = validObs.reduce((acc, curr) => acc + Math.pow(curr.to - meanTO, 2), 0);
+        const stdDev = Math.sqrt(sumSqDiff / (n - 1));
+
+        const k = parseFloat(document.getElementById('confLevel').value);
+        const e = parseFloat(document.getElementById('errMargin').value) / 100;
+
+        let nCalc = Math.pow((k * stdDev) / (e * meanTO), 2);
+        nCalc = Math.ceil(nCalc) || 0;
+        
+        document.getElementById('kpiNCalc').innerText = nCalc;
+        
+        const ind = document.getElementById('sampleIndicator');
+        if (n >= nCalc && nCalc > 0) {
+            ind.className = 'indicator ind-good';
+            ind.innerText = 'Muestra Estadísticamente Representativa: Sí';
+        } else {
+            ind.className = 'indicator ind-bad';
+            ind.innerText = 'Muestra Estadísticamente Representativa: No';
+        }
+
+        const avgRating = validObs.reduce((acc, curr) => acc + curr.rating, 0) / n;
+        const TN = meanTO * (avgRating / 100);
+
+        const supP = parseFloat(document.getElementById('supPers').value) || 0;
+        const supF = parseFloat(document.getElementById('supFatiga').value) || 0;
+        const supV = parseFloat(document.getElementById('supVar').value) || 0;
+        const totalSups = (supP + supF + supV) / 100;
+        
+        const TE = TN * (1 + totalSups);
+
+        document.getElementById('kpiTO').innerText = meanTO.toFixed(2) + 's';
+        document.getElementById('kpiTN').innerText = TN.toFixed(2) + 's';
+        document.getElementById('kpiTE').innerText = TE.toFixed(2) + 's';
+
+        updateCharts(validObs, TN, totalSups * TN);
+    }
+
+    function resetStatsUI() {
+        document.getElementById('kpiNCalc').innerText = '0';
+        document.getElementById('sampleIndicator').className = 'indicator ind-bad';
+        document.getElementById('sampleIndicator').innerText = 'Muestra Insuficiente';
+        document.getElementById('kpiTO').innerText = '0.00s';
+        document.getElementById('kpiTN').innerText = '0.00s';
+        document.getElementById('kpiTE').innerText = '0.00s';
+    }
+
+    function updateCharts(validObs, TN, TotalSupsTime) {
+        if (!chartStability || !chartBreakdown) return; // Evita que se rompa si no hay gráficos
+
+        chartStability.data.labels = validObs.map(o => `C${o.cycle}`);
+        chartStability.data.datasets[0].data = validObs.map(o => o.to);
+        chartStability.update();
+
+        chartBreakdown.data.datasets[0].data = [TN];
+        chartBreakdown.data.datasets[1].data = [TotalSupsTime];
+        chartBreakdown.update();
+    }
+
+    // MODULO BIMANUAL
+    function addTherbligRow() {
+        const id = Date.now();
+        bimanualData.push({ id, lh: 'AL', rh: 'AL' });
+        renderBimanual();
+    }
+
+    function renderBimanual() {
+        bimanualContainer.innerHTML = '';
+        let effectiveCount = 0;
+        let totalHandsCount = bimanualData.length * 2;
+
+        const optionsHtml = therbligs.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
+
+        bimanualData.forEach((row, index) => {
+            const div = document.createElement('div');
+            div.className = 'bimanual-row';
+            
+            const lhType = therbligs.find(t=>t.code === row.lh)?.type;
+            const rhType = therbligs.find(t=>t.code === row.rh)?.type;
+            if(lhType === 'effective') effectiveCount++;
+            if(rhType === 'effective') effectiveCount++;
+
+            div.innerHTML = `
+                <div style="color: var(--text-muted)">Paso ${index+1}</div>
+                <select onchange="updateBimanual(${index}, 'lh', this.value)">
+                    ${optionsHtml.replace(`value="${row.lh}"`, `value="${row.lh}" selected`)}
+                </select>
+                <select onchange="updateBimanual(${index}, 'rh', this.value)">
+                    ${optionsHtml.replace(`value="${row.rh}"`, `value="${row.rh}" selected`)}
+                </select>
+                <button class="btn btn-danger" onclick="deleteTherblig(${index})">X</button>
+            `;
+            bimanualContainer.appendChild(div);
+        });
+
+        const balanceEl = document.getElementById('bimanualBalance');
+        if (totalHandsCount > 0) {
+            const effPercentage = ((effectiveCount / totalHandsCount) * 100).toFixed(1);
+            balanceEl.innerText = `Efectividad Bimanual: ${effPercentage}%`;
+            balanceEl.className = effPercentage > 60 ? 'indicator ind-good' : 'indicator ind-bad';
+        } else {
+            balanceEl.innerText = `Agrega movimientos`;
+            balanceEl.className = 'indicator';
+        }
+    }
+
+    function updateBimanual(index, hand, value) {
+        bimanualData[index][hand] = value;
+        renderBimanual();
+    }
+
+    function deleteTherblig(index) {
+        bimanualData.splice(index, 1);
+        renderBimanual();
+    }
+
+    // UTILIDADES
+    function resetStudy() {
+        observations = [];
+        lastSnapTime = 0;
+        renderTable();
+        calculateStats();
+    }
+
+    function randomNormal(mean, stdDev) {
+        const u = 1 - Math.random(); 
+        const v = Math.random();
+        const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        return z * stdDev + mean;
+    }
+
+    function loadDemoData() {
+        resetStudy();
+        const baseTime = 12.5; 
+        const baseStdDev = 1.2;
+        
+        for (let i = 1; i <= 15; i++) {
+            let to = randomNormal(baseTime, baseStdDev);
+            if(Math.random() > 0.9) to += 8; 
+            
+            observations.push({
+                id: Date.now() + i,
+                cycle: i,
+                to: Math.abs(to),
+                rating: Math.floor(Math.random() * 3) * 5 + 95, 
+                outlier: false
+            });
+        }
+        
+        bimanualData = [
+            { id: 1, lh: 'AL', rh: 'SO' },
+            { id: 2, lh: 'T', rh: 'SO' },
+            { id: 3, lh: 'M', rh: 'AL' },
+            { id: 4, lh: 'E', rh: 'E' },
+            { id: 5, lh: 'D', rh: 'D' }
+        ];
+        
+        timingMode.value = 'snapback';
+        renderTable();
+        calculateStats();
+        renderBimanual();
+    }
+
+    function exportCSV() {
+        if(observations.length === 0) {
+            alert('No hay datos para exportar.');
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Ciclo,TiempoObservado,Rating,Atipico\n";
+
+        observations.forEach(obs => {
+            const row = `${obs.cycle},${obs.to.toFixed(3)},${obs.rating},${obs.outlier ? 'SI' : 'NO'}`;
+            csvContent += row + "\n";
+        });
+
+        csvContent += "\nRESUMEN ESTADISTICO\n";
+        csvContent += `Muestra N,${document.getElementById('kpiN').innerText}\n`;
+        csvContent += `Tiempo Promedio,${document.getElementById('kpiTO').innerText}\n`;
+        csvContent += `Tiempo Normal,${document.getElementById('kpiTN').innerText}\n`;
+        csvContent += `Tiempo Estandar,${document.getElementById('kpiTE').innerText}\n`;
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "estudio_tiempos.csv");
+        document.body.appendChild(link); 
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // INICIALIZACIÓN
+    window.onload = () => {
+        initCharts();
+        renderBimanual();
+    };
+</script>
+</body>
+</html>
